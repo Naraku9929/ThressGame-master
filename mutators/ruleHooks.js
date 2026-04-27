@@ -1708,6 +1708,385 @@ const hooks = {
       }
     },
   },
+
+  // ============================================================
+  // MTG / Yugioh / Pokemon / Roguelite Cards
+  // ============================================================
+
+  // --- Pyroclasm (MTG Red Sorcery) ---
+  pyroclasm: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      let removed = false;
+      for (const [sq, piece] of [...board.entries()]) {
+        if (piece.type === 'p') {
+          if (destroyPiece(room, board, sq)) removed = true;
+        }
+      }
+      if (removed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Wrath of God (MTG White Sorcery) ---
+  wrath_of_god: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      let removed = false;
+      for (const [sq, piece] of [...board.entries()]) {
+        if (piece.type !== 'k' && piece.type !== 'q') {
+          if (destroyPiece(room, board, sq)) removed = true;
+        }
+      }
+      if (removed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Polymorph (MTG Blue Sorcery) ---
+  polymorph: {
+    onActivate(room, chooserColor) {
+      const board = getBoardFromRoom(room);
+      const opponentColor = chooserColor === 'w' ? 'b' : 'w';
+      const eligible = [];
+      for (const [sq, piece] of board) {
+        if (piece.color === opponentColor && piece.type !== 'k' && piece.type !== 'p') {
+          eligible.push(sq);
+        }
+      }
+      if (eligible.length > 0) {
+        const target = randomFrom(eligible);
+        const piece = board.get(target);
+        board.set(target, { type: 'p', color: piece.color });
+        syncChessFromBoard(room, board);
+      }
+    },
+  },
+
+  // --- Mutation (MTG / Yugioh Fusion) ---
+  mutation: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      for (const [sq, piece] of [...board.entries()]) {
+        if (piece.type === 'b') {
+          board.set(sq, { type: 'r', color: piece.color });
+        } else if (piece.type === 'r') {
+          board.set(sq, { type: 'b', color: piece.color });
+        }
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Rite of Passage (Pokemon Evolution / MTG) ---
+  rite_of_passage: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      let changed = false;
+      for (const [sq, piece] of board) {
+        if (piece.type !== 'p') continue;
+        const rowIdx = ROWS.indexOf(sq[1]); // 0='1'(white back) ... 7='8'(black back)
+        // White enemy territory: rows 5-8 (index 4+); Black enemy territory: rows 1-4 (index 0-3)
+        const inEnemyTerritory =
+          (piece.color === 'w' && rowIdx >= 4) ||
+          (piece.color === 'b' && rowIdx <= 3);
+        if (inEnemyTerritory) {
+          board.set(sq, { type: 'q', color: piece.color });
+          changed = true;
+        }
+      }
+      if (changed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Graveyard Shift (Roguelite) ---
+  graveyard_shift: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      const entries = [...board.entries()];
+      // Clear all current positions
+      for (const [sq] of entries) board.delete(sq);
+      // Re-place each piece at its mirror position
+      for (const [sq, piece] of entries) {
+        const colIdx = COLUMNS.indexOf(sq[0]);
+        const rowIdx = ROWS.indexOf(sq[1]);
+        const mirrorSq = COLUMNS[7 - colIdx] + ROWS[7 - rowIdx];
+        if (!isSquareHardBlocked(room, mirrorSq) && !board.has(mirrorSq)) {
+          board.set(mirrorSq, piece);
+        } else {
+          const nearest = findNearestValidSquare(room, board, mirrorSq, sq);
+          if (nearest) board.set(nearest, piece);
+        }
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Mirror Force (Yugioh Trap Card) ---
+  mirror_force: {
+    onActivate(room, chooserColor, choiceData) {
+      if (!choiceData) return;
+      const board = getBoardFromRoom(room);
+      const piece = board.get(choiceData);
+      if (!piece) return;
+      const colIdx = COLUMNS.indexOf(choiceData[0]);
+      const rowIdx = ROWS.indexOf(choiceData[1]);
+      const mirrorSq = COLUMNS[7 - colIdx] + ROWS[7 - rowIdx];
+      board.delete(choiceData);
+      safePlacePiece(room, board, mirrorSq, piece.type, piece.color);
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Army of the Dead (MTG / Roguelite) ---
+  army_of_the_dead: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      for (const color of ['w', 'b']) {
+        for (let i = 0; i < 3; i++) {
+          const empty = getValidEmptySquares(room, board);
+          if (empty.length === 0) break;
+          const sq = randomFrom(empty);
+          safePlacePiece(room, board, sq, 'p', color);
+        }
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- The Equalizer (Roguelite) ---
+  the_equalizer: {
+    onActivate(room) {
+      const board = getBoardFromRoom(room);
+      let wCount = 0, bCount = 0;
+      for (const [, piece] of board) {
+        if (piece.type === 'k') continue;
+        if (piece.color === 'w') wCount++;
+        else bCount++;
+      }
+      const diff = Math.abs(wCount - bCount);
+      const addCount = Math.min(diff, 4);
+      if (addCount === 0) return;
+      const fewerColor = wCount <= bCount ? 'w' : 'b';
+      for (let i = 0; i < addCount; i++) {
+        const empty = getValidEmptySquares(room, board);
+        if (empty.length === 0) break;
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'p', fewerColor);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Fusion Summon (Yugioh) ---
+  fusion_summon: {
+    onActivate(room, chooserColor) {
+      const board = getBoardFromRoom(room);
+      const knights = findPieces(board, 'n', chooserColor);
+      if (knights.length === 0) return;
+      for (const k of knights) removePiece(board, k.square);
+      const empty = getValidEmptySquares(room, board);
+      if (empty.length > 0) {
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'q', chooserColor);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Dark Bargain (MTG Black) ---
+  dark_bargain: {
+    onActivate(room, chooserColor) {
+      const board = getBoardFromRoom(room);
+      const pawns = findPieces(board, 'p', chooserColor);
+      if (pawns.length === 0) return;
+      for (const p of pawns) removePiece(board, p.square);
+      for (let i = 0; i < pawns.length; i++) {
+        const empty = getValidEmptySquares(room, board);
+        if (empty.length === 0) break;
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'n', chooserColor);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Energy Burst (Pokemon) ---
+  energy_burst: {
+    onActivate(room, chooserColor) {
+      const board = getBoardFromRoom(room);
+      const opponentColor = chooserColor === 'w' ? 'b' : 'w';
+      const enemyPawns = [];
+      for (const [sq, piece] of board) {
+        if (piece.color === opponentColor && piece.type === 'p') enemyPawns.push(sq);
+      }
+      let removed = false;
+      const count = Math.min(3, enemyPawns.length);
+      for (let i = 0; i < count; i++) {
+        const idx = Math.floor(Math.random() * enemyPawns.length);
+        const sq = enemyPawns.splice(idx, 1)[0];
+        if (destroyPiece(room, board, sq)) removed = true;
+      }
+      if (removed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Proliferate (MTG) ---
+  proliferate: {
+    onTurnEnd(room) {
+      const board = getBoardFromRoom(room);
+      for (const color of ['w', 'b']) {
+        const empty = getValidEmptySquares(room, board);
+        if (empty.length === 0) break;
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'p', color);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Forced Evolution (Pokemon) ---
+  forced_evolution: {
+    onTurnEnd(room) {
+      const board = getBoardFromRoom(room);
+      let changed = false;
+      for (const color of ['w', 'b']) {
+        const pawns = findPieces(board, 'p', color);
+        if (pawns.length > 0) {
+          const target = randomFrom(pawns);
+          board.set(target.square, { type: 'n', color });
+          changed = true;
+        }
+      }
+      if (changed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- War of Attrition (Roguelite) ---
+  war_of_attrition: {
+    onTurnEnd(room) {
+      const board = getBoardFromRoom(room);
+      let wCount = 0, bCount = 0;
+      for (const [, piece] of board) {
+        if (piece.type === 'k') continue;
+        if (piece.color === 'w') wCount++;
+        else bCount++;
+      }
+      if (wCount === bCount) return;
+      const loserColor = wCount > bCount ? 'w' : 'b';
+      const nonKings = [];
+      for (const [sq, piece] of board) {
+        if (piece.color === loserColor && piece.type !== 'k') nonKings.push(sq);
+      }
+      if (nonKings.length > 0) {
+        const target = randomFrom(nonKings);
+        if (destroyPiece(room, board, target)) syncChessFromBoard(room, board);
+      }
+    },
+  },
+
+  // --- Spreading Rot (MTG Black) ---
+  spreading_rot: {
+    onTurnEnd(room) {
+      const board = getBoardFromRoom(room);
+      const toDestroy = [];
+      for (const [sq, piece] of board) {
+        if (piece.type === 'k') continue;
+        const adjacent = getAdjacentSquares(sq);
+        const hasAdjacentEnemy = adjacent.some(adjSq => {
+          const adjPiece = board.get(adjSq);
+          return adjPiece && adjPiece.color !== piece.color;
+        });
+        if (hasAdjacentEnemy && Math.random() < 0.33) {
+          toDestroy.push(sq);
+        }
+      }
+      let removed = false;
+      for (const sq of toDestroy) {
+        if (destroyPiece(room, board, sq)) removed = true;
+      }
+      if (removed) syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Deathtouch (MTG keyword) ---
+  deathtouch: {
+    onCapture(room, playerColor, capturedPiece, captureSquare) {
+      const ms = room.mutatorState;
+      const activeRule = ms.activeRules.find(ar => ar.rule.id === 'deathtouch');
+      if (!activeRule) return;
+      const chooserColor = activeRule.chooser;
+      // capturedColor is the opponent of the player who moved (the capturer)
+      const capturedColor = playerColor === 'w' ? 'b' : 'w';
+      // If the piece that was captured belonged to the chooser, kill the capturing piece
+      if (capturedColor === chooserColor) {
+        const board = getBoardFromRoom(room);
+        const capturingPiece = board.get(captureSquare);
+        if (capturingPiece && capturingPiece.type !== 'k') {
+          if (destroyPiece(room, board, captureSquare)) {
+            syncChessFromBoard(room, board);
+          }
+        }
+      }
+    },
+  },
+
+  // --- Vengeance (MTG) ---
+  vengeance: {
+    onCapture(room, playerColor, capturedPiece, captureSquare) {
+      const ms = room.mutatorState;
+      const activeRule = ms.activeRules.find(ar => ar.rule.id === 'vengeance');
+      if (!activeRule) return;
+      const chooserColor = activeRule.chooser;
+      const capturedColor = playerColor === 'w' ? 'b' : 'w';
+      // If chooser's piece was captured, destroy a random enemy non-King
+      if (capturedColor === chooserColor) {
+        const board = getBoardFromRoom(room);
+        const enemyNonKings = [];
+        for (const [sq, piece] of board) {
+          if (piece.color === playerColor && piece.type !== 'k') enemyNonKings.push(sq);
+        }
+        if (enemyNonKings.length > 0) {
+          const target = randomFrom(enemyNonKings);
+          if (destroyPiece(room, board, target)) syncChessFromBoard(room, board);
+        }
+      }
+    },
+  },
+
+  // --- Last Stand (Roguelite) ---
+  last_stand: {
+    onExpire(room) {
+      const board = getBoardFromRoom(room);
+      let wCount = 0, bCount = 0;
+      for (const [, piece] of board) {
+        if (piece.type === 'k') continue;
+        if (piece.color === 'w') wCount++;
+        else bCount++;
+      }
+      if (wCount === bCount) return;
+      const fewerColor = wCount < bCount ? 'w' : 'b';
+      for (let i = 0; i < 2; i++) {
+        const empty = getValidEmptySquares(room, board);
+        if (empty.length === 0) break;
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'r', fewerColor);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
+
+  // --- Rebirth (MTG / Roguelite) ---
+  rebirth: {
+    onExpire(room) {
+      const board = getBoardFromRoom(room);
+      for (const color of ['w', 'b']) {
+        const empty = getValidEmptySquares(room, board);
+        if (empty.length === 0) break;
+        const sq = randomFrom(empty);
+        safePlacePiece(room, board, sq, 'q', color);
+      }
+      syncChessFromBoard(room, board);
+    },
+  },
 };
 
 /**
