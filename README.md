@@ -4,7 +4,7 @@
 
 Based on a concept by [DougDoug](https://twitch.tv/dougdoug)
 
-Play at [playanarchychess.com](https://playanarchychess.com).
+
 
 ## Features
 
