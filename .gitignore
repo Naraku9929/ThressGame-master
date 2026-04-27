@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.env
+tests/
+tmp/
+backups/
+*.psd
+.serena/
+.superpowers/
+test_node_modules/

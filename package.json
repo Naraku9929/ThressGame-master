@@ -1,0 +1,21 @@
+{
+  "name": "chess",
+  "version": "1.0.63",
+  "description": "1v1 online chess with room codes and mutators",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["chess", "multiplayer", "socket.io", "mutators"],
+  "author": "KaydFun",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "express": "^5.1.0",
+    "obscenity": "^0.4.5",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thress</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=1.0.54" />
+  </head>
+  <body class="variant-a">
+    <div id="global-status" class="global-status"></div>
+    <main>
+      <!-- ============================================================ -->
+      <!-- LANDING PANEL                                                -->
+      <!-- ============================================================ -->
+      <section id="landing-panel" class="panel landing-panel">
+        <div class="landing-header">
+          <h1 class="game-title">Thress</h1>
+          <p class="game-subtitle">It's three-rule chess.</p>
+        </div>
+
+        <div class="landing-form">
+          <label class="field">
+            <span>Choose a name</span>
+            <input
+              id="name-input"
+              name="name"
+              type="text"
+              minlength="1"
+              maxlength="20"
+              required
+              placeholder="Knight42"
+              autocomplete="off"
+            />
+          </label>
+
+          <p id="join-error" class="feedback" role="alert"></p>
+
+          <div class="landing-buttons">
+            <button id="create-room-btn" type="button" class="btn-primary">
+              Create Room
+            </button>
+            <button id="join-room-btn" type="button" class="btn-secondary">
+              Join Room
+            </button>
+            <button id="play-bot-btn" type="button" class="btn-secondary">
+              Play vs Bot
+            </button>
+          </div>
+
+          <!-- Join Room code input (shown inline when Join Room is clicked) -->
+          <div id="join-code-section" class="join-code-section hidden">
+            <label class="field">
+              <span>Room Code</span>
+              <div class="join-code-row">
+                <input
+                  id="room-code-input"
+                  name="roomCode"
+                  type="text"
+                  maxlength="20"
+                  placeholder="Enter room code"
+                  autocomplete="off"
+                />
+                <button id="join-code-submit" type="button" class="btn-primary btn-small">
+                  Join
+                </button>
+              </div>
+            </label>
+          </div>
+
+          <!-- Create Room options (shown inline when Create Room is clicked) -->
+          <div id="create-options-section" class="create-options-section hidden">
+            <div class="create-options-row">
+              <label class="field">
+                <span>Preferred Color</span>
+                <select id="color-select">
+                  <option value="">Random</option>
+                  <option value="w">White</option>
+                  <option value="b">Black</option>
+                </select>
+              </label>
+              <label class="checkbox-field">
+                <input type="checkbox" id="private-check" />
+                <span>Private Room</span>
+              </label>
+            </div>
+            <div class="mutator-settings-wrapper">
+              <button type="button" id="mutator-settings-toggle" class="mutator-settings-toggle">
+                Mutator Settings <span id="mutator-settings-summary">(All enabled)</span>
+              </button>
+              <div id="mutator-settings-panel" class="mutator-settings-panel hidden">
+                <div class="mutator-settings-controls">
+                  <label class="toggle-label">
+                    <input type="checkbox" id="mutator-toggle-all" checked> Enable All
+                  </label>
+                  <label class="toggle-label">
+                    <input type="checkbox" id="manual-coin-flip"> Manual Coin Flip (honor system)
+                  </label>
+                </div>
+                <div id="mutator-categories" class="mutator-categories">
+                  <!-- Populated by JS from /api/rules -->
+                </div>
+              </div>
+            </div>
+            <button id="create-room-submit" type="button" class="btn-primary">
+              Create
+            </button>
+          </div>
+        </div>
+
+        <!-- Open Rooms Table -->
+        <div class="open-rooms-section">
+          <h2>Open Rooms</h2>
+          <div id="rooms-list" class="rooms-list">
+            <p class="rooms-empty">No open rooms. Create one!</p>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- WAITING PANEL                                                -->
+      <!-- ============================================================ -->
+      <section id="waiting-panel" class="panel waiting-panel hidden">
+        <h2 class="waiting-title">Waiting for Opponent</h2>
+        <div class="room-code-display">
+          <span class="room-code-label">Room Code</span>
+          <button id="room-code-copy" class="room-code-value" title="Click to copy">
+            <span id="room-code-text">****</span>
+            <svg class="copy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+          <button id="room-code-toggle" class="btn-small room-code-toggle" type="button" title="Show room code">Show</button>
+          <span id="copy-feedback" class="copy-feedback hidden">Copied!</span>
+        </div>
+        <div class="waiting-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <p class="waiting-subtext">Share the room code with a friend to start playing.</p>
+        <button id="cancel-waiting-btn" type="button" class="btn-danger">
+          Cancel
+        </button>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- GAME PANEL                                                   -->
+      <!-- ============================================================ -->
+      <section id="game-panel" class="panel game-panel hidden" aria-live="polite">
+        <div id="spectator-banner" class="spectator-banner hidden">Spectating</div>
+
+        <!-- Info Bar (Variant A only) -->
+        <div class="info-bar variant-a-only">
+          <div class="info-bar-left">
+            <span class="info-bar-label">Room</span>
+            <span id="sidebar-room-code" class="info-bar-value">****</span>
+            <button id="sidebar-code-toggle" class="btn-small room-code-toggle room-code-toggle-inline" type="button" title="Show room code">Show</button>
+            <span id="spectator-count" class="spectator-count hidden">0 watching</span>
+          </div>
+          <div class="info-bar-right">
+            <button type="button" id="disable-spectating-btn" class="btn-danger btn-small disable-spectating-btn hidden" title="Disable spectating">Lock Room</button>
+            <button type="button" id="resign-button" class="btn-danger btn-small">Resign</button>
+          </div>
+        </div>
+
+        <!-- Game Section: Board + Choice Panel -->
+        <div class="game-section">
+          <!-- Board Area -->
+          <div class="board-area">
+            <div id="opponent-bar" class="player-bar opponent-bar">
+              <span id="opponent-name" class="player-bar-name">Opponent</span>
+              <div id="opponent-captured" class="captured-pieces"></div>
+            </div>
+
+            <div class="board-container">
+              <div id="board" class="board" role="grid" aria-label="Chess board"></div>
+              <div id="game-status" class="game-status-banner"></div>
+            </div>
+
+            <div id="player-bar" class="player-bar my-bar">
+              <span id="my-name-display" class="player-bar-name">You</span>
+              <div id="my-captured" class="captured-pieces"></div>
+            </div>
+
+            <div id="target-selection-bar" class="target-selection-bar hidden">
+              <span id="target-selection-text"></span>
+            </div>
+          </div>
+
+          <!-- Right Column: Turn Indicator + Choice Panel -->
+          <div class="choice-column">
+            <div class="title-wrapper">
+              <div id="title-card" class="title-card">
+                <div class="card-face card-front white-turn">White Turn</div>
+                <div class="card-face card-back black-turn">Black Turn</div>
+              </div>
+            </div>
+            <div id="mutator-choice-panel" class="mutator-choice-panel hidden">
+              <div id="mutator-panel" class="mutator-panel"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Mutators - Bottom Row -->
+        <div id="active-mutators-row" class="active-mutators-row"></div>
+
+        <!-- Sidebar Status (kept for JS compatibility, hidden) -->
+        <div id="sidebar-status" class="sidebar-status hidden"></div>
+
+        <!-- Turn indicator (kept for JS compatibility, hidden) -->
+        <div id="turn-indicator" class="turn-indicator" style="display:none">
+          <span id="turn-text">Waiting...</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- ============================================================ -->
+    <!-- PROMOTION MODAL                                              -->
+    <!-- ============================================================ -->
+    <div
+      id="promotion-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Choose promotion piece"
+    >
+      <div class="modal-content promotion-modal-content">
+        <h2>Promote Pawn</h2>
+        <div id="promotion-choices" class="promotion-choices"></div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- GAME OVER MODAL                                              -->
+    <!-- ============================================================ -->
+    <div
+      id="game-over-modal"
+      class="modal hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="game-over-text"
+    >
+      <div class="modal-content">
+        <h2 id="game-over-text"></h2>
+        <div class="game-over-buttons">
+          <button type="button" id="game-over-new-game" class="btn-primary">
+            Play Again
+          </button>
+          <button type="button" id="game-over-quit" class="btn-secondary">
+            Quit
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- RPS MODAL                                                    -->
+    <!-- ============================================================ -->
+    <div id="rps-modal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Rock Paper Scissors">
+      <div class="modal-content rps-modal-content">
+        <h2>Parry! Rock Paper Scissors</h2>
+        <p id="rps-context" class="rps-context"></p>
+        <div id="rps-pick-phase" class="rps-choices">
+          <button type="button" class="rps-btn" data-choice="rock">Rock</button>
+          <button type="button" class="rps-btn" data-choice="paper">Paper</button>
+          <button type="button" class="rps-btn" data-choice="scissors">Scissors</button>
+        </div>
+        <div id="rps-showdown" class="rps-showdown hidden">
+          <div class="rps-player-card">
+            <span class="rps-card-label" id="rps-you-label">WHITE</span>
+            <div class="rps-card rps-card-you" id="rps-you-card"></div>
+          </div>
+          <span class="rps-vs">VS</span>
+          <div class="rps-player-card">
+            <span class="rps-card-label" id="rps-opp-label">BLACK</span>
+            <div class="rps-card rps-card-opp" id="rps-opp-card">
+              <div class="rps-card-inner">
+                <div class="rps-card-front">?</div>
+                <div class="rps-card-back" id="rps-opp-choice"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p id="rps-outcome" class="rps-outcome hidden"></p>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- COIN FLIP OVERLAY                                             -->
+    <!-- ============================================================ -->
+    <div id="coin-flip-overlay" class="modal hidden" role="dialog" aria-modal="true" aria-label="Coin Flip">
+      <div class="modal-content coin-flip-content">
+        <h2 id="coin-flip-title">All on Red!</h2>
+        <div id="coin-flip-coin" class="coin">
+          <div class="coin-face coin-heads">H</div>
+          <div class="coin-face coin-tails">T</div>
+        </div>
+        <p id="coin-flip-instruction" class="coin-flip-instruction">Click the coin to flip!</p>
+        <p id="coin-flip-result-text" class="coin-flip-result-text hidden"></p>
+      </div>
+    </div>
+
+    <div id="coin-flip-manual" class="coin-flip-manual hidden">
+      <span id="coin-flip-manual-text">All on Red: What did you flip?</span>
+      <button type="button" class="coin-manual-btn" data-choice="heads">Heads</button>
+      <button type="button" class="coin-manual-btn" data-choice="tails">Tails</button>
+    </div>
+
+    <footer class="footer">
+      <span class="footer-copyright">
+        &copy; <a href="https://kaydhendricks.com" target="_blank" rel="noopener noreferrer" class="footer-link">Kayd Hendricks</a>
+      </span>
+      <span class="footer-separator">&bull;</span>
+      <a href="https://buymeacoffee.com/callmekayd" target="_blank" rel="noopener noreferrer" class="footer-link">
+        Buy me a Coffee
+      </a>
+      <span class="footer-separator">&bull;</span>
+      <a href="https://www.twitch.tv/dougdoug" target="_blank" rel="noopener noreferrer" class="footer-link">
+        Concept by DougDoug
+      </a>
+      <span class="footer-separator">&bull;</span>
+      <a href="https://github.com/Ryukaki/ThressGame" target="_blank" rel="noopener" class="footer-version">v1.0.63</a>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="/js/chess.js"></script>
+    <script src="socket.io/socket.io.js"></script>
+    <script type="module" src="js/main.js?v=1.0.41"></script>
+  </body>
+</html>
