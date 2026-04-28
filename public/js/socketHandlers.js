@@ -381,6 +381,7 @@ export async function onMutatorActivated(payload) {
   if (payload.fen) {
     state.currentFen = payload.fen;
     syncChessInstance(state.currentFen);
+    if (state.chessInstance) state.currentTurn = state.chessInstance.turn();
   }
 
   if (oldFen && payload.fen && oldFen !== payload.fen) {
@@ -388,6 +389,8 @@ export async function onMutatorActivated(payload) {
   } else {
     renderBoard();
   }
+
+  updateTurnIndicator();
 
   if (payload.mutatorState) {
     state.mutatorState = payload.mutatorState;
@@ -457,6 +460,7 @@ export async function onMutatorBoardUpdate(payload) {
   if (payload.fen) {
     state.currentFen = payload.fen;
     syncChessInstance(state.currentFen);
+    if (state.chessInstance) state.currentTurn = state.chessInstance.turn();
   }
 
   if (oldFen && payload.fen && oldFen !== payload.fen) {
@@ -464,6 +468,8 @@ export async function onMutatorBoardUpdate(payload) {
   } else {
     renderBoard();
   }
+
+  updateTurnIndicator();
 
   if (payload.mutatorState) {
     state.mutatorState = payload.mutatorState;

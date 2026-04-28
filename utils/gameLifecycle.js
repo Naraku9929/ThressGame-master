@@ -90,6 +90,7 @@ function triggerCoinFlip(room, io, forColor) {
         ms.coinFlipResult = { result, moveCount: ms.moveCount };
         ms.pendingCoinFlip = null;
         io.to(room.roomCode).emit('coinFlipResult', { result, forPlayer: forColor, manual: true });
+        checkCoinFlipSkipTurn(room, io, forColor);
       }, flipDelay);
     } else {
       io.to(room.roomCode).emit('coinFlipPrompt', { forPlayer: forColor });

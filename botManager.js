@@ -127,6 +127,13 @@ function scheduleBotMove(room, io, gameManager, handleMoveFn, afterMoveFn) {
   // Only schedule if it's a bot's turn
   if (!currentPlayer || !currentPlayer.isBot) return;
 
+  // Cancel any existing bot_move timer before scheduling a new one
+  const existingTimer = room.disconnectTimers.get('bot_move');
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+    room.disconnectTimers.delete('bot_move');
+  }
+
   // Random delay between 2000ms and 4000ms
   const delay = 2000 + Math.random() * 2000;
 
@@ -209,7 +216,13 @@ async function performBotMove(room, io, gameManager, handleMoveFn, afterMoveFn) 
   if (!bot || !bot.isBot) return;
 
   // If there's a pending mutator state, reschedule instead of moving now
-  if (room.mutatorState && (room.mutatorState.pendingRPS || room.mutatorState.pendingChoice || room.mutatorState.pendingAction || room.mutatorState.pendingSecondAction)) {
+  if (room.mutatorState && (
+    room.mutatorState.pendingRPS ||
+    room.mutatorState.pendingChoice ||
+    room.mutatorState.pendingAction ||
+    room.mutatorState.pendingSecondAction ||
+    room.mutatorState.pendingCoinFlip
+  )) {
     scheduleBotMove(room, io, gameManager, handleMoveFn, afterMoveFn);
     return;
   }

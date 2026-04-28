@@ -152,6 +152,7 @@ function createMutatorHandlers({ handleMove, scheduleBotMove, generateBotTarget 
           io.to(room.roomCode).emit('mutatorActivated', botPayload1);
           checkKingDestroyed(room, io, gameManager);
           checkMutatorDeadlock(room, io, gameManager);
+          if (room.status === 'active') scheduleBotMove(room, io, gameManager, handleMove, botAutoMutatorResponse);
         }
       }
     }
@@ -187,6 +188,7 @@ function createMutatorHandlers({ handleMove, scheduleBotMove, generateBotTarget 
           io.to(room.roomCode).emit('mutatorActivated', botPayload2);
           checkKingDestroyed(room, io, gameManager);
           checkMutatorDeadlock(room, io, gameManager);
+          if (room.status === 'active') scheduleBotMove(room, io, gameManager, handleMove, botAutoMutatorResponse);
         }
       }
     }
@@ -347,6 +349,9 @@ function createMutatorHandlers({ handleMove, scheduleBotMove, generateBotTarget 
 
       // Check if mutator restrictions leave the current player with no legal moves
       checkMutatorDeadlock(room, io, gameManager);
+
+      // Ensure bot gets its move after mutator selection
+      if (room.status === 'active') scheduleBotMove(room, io, gameManager, handleMove, botAutoMutatorResponse);
 
       // If All on Red just activated, trigger immediate coin flip
       if (option.id === 'all_on_red' || isRuleActive(ms, 'all_on_red')) {
@@ -662,6 +667,9 @@ function createMutatorHandlers({ handleMove, scheduleBotMove, generateBotTarget 
         // Check if mutator restrictions leave the current player with no legal moves
         checkMutatorDeadlock(room, io, gameManager);
 
+        // Ensure bot gets its move after mutator action resolution
+        if (room.status === 'active') scheduleBotMove(room, io, gameManager, handleMove, botAutoMutatorResponse);
+
         // If All on Red is active, trigger immediate coin flip
         if (ruleId === 'all_on_red' || isRuleActive(ms, 'all_on_red')) {
           const nextTurn = room.chess.turn();
@@ -739,6 +747,9 @@ function createMutatorHandlers({ handleMove, scheduleBotMove, generateBotTarget 
         io.to(room.roomCode).emit('mutatorActivated', activatedPayload3);
         checkKingDestroyed(room, io, gameManager);
         checkMutatorDeadlock(room, io, gameManager);
+
+        // Ensure bot gets its move after second-action resolution
+        if (room.status === 'active') scheduleBotMove(room, io, gameManager, handleMove, botAutoMutatorResponse);
 
         if (ruleId === 'all_on_red' || isRuleActive(ms, 'all_on_red')) {
           const nextTurn = room.chess.turn();

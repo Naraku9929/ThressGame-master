@@ -224,11 +224,17 @@ class GameManager {
     const room = this.rooms.get(roomCode);
     if (!room) return;
 
-    // Cleanup socket/token mappings
+    // Cleanup socket/token mappings -- only delete if they still point to this room
+    // (prevents a completed game's cleanup from wiping the mapping of a new game
+    // joined by the same socket/token without an intervening disconnect)
     for (const player of [room.white, room.black]) {
       if (player) {
-        if (player.socketId) this.socketToRoom.delete(player.socketId);
-        if (player.token) this.tokenToRoom.delete(player.token);
+        if (player.socketId && this.socketToRoom.get(player.socketId) === roomCode) {
+          this.socketToRoom.delete(player.socketId);
+        }
+        if (player.token && this.tokenToRoom.get(player.token) === roomCode) {
+          this.tokenToRoom.delete(player.token);
+        }
       }
     }
 
